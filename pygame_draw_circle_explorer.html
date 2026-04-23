@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pygame.draw.circle — interactive explorer</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:system-ui,sans-serif;color:#1a1a2e;background:#f4f6f8;padding:16px;}
+  .wrap{max-width:860px;margin:0 auto;}
+  .code-box{background:#1e1e2e;border-radius:8px;padding:14px 18px;font-family:'Courier New',monospace;font-size:12.5px;line-height:1.7;color:#cdd6f4;white-space:pre-wrap;word-break:break-all;margin-bottom:14px;}
+  .fn{color:#89b4fa;}.cm{color:#6c7086;font-style:italic;}
+  .canvas-wrap{background:#16213e;border-radius:8px;padding:6px;margin-bottom:14px;}
+  canvas{display:block;border-radius:6px;width:100%;height:200px;}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px 32px;}
+  .section-title{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#888;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid #dde1e7;}
+  .section-title:first-child{margin-top:0;}
+  .ctrl-group{margin-bottom:10px;}
+  .ctrl-label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#555;margin-bottom:4px;}
+  .ctrl-label .val{font-weight:600;color:#1a1a2e;background:#f0f2f5;padding:1px 8px;border-radius:4px;font-size:11.5px;font-family:monospace;}
+  input[type=range]{width:100%;height:4px;accent-color:#185fa5;cursor:pointer;display:block;}
+  .color-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .color-ctrl{display:flex;flex-direction:column;gap:4px;align-items:center;}
+  .color-ctrl label{font-size:11px;color:#777;}
+  .color-ctrl .val{font-size:11px;font-family:monospace;color:#444;}
+  .swatch{width:100%;height:18px;border-radius:4px;border:1px solid #ddd;margin-top:6px;}
+  .quad-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .toggle-wrap{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .toggle-wrap label.lbl{font-size:12px;color:#555;flex:1;}
+  .tog{position:relative;width:36px;height:20px;flex-shrink:0;}
+  .tog input{opacity:0;width:0;height:0;}
+  .tog-slider{position:absolute;inset:0;background:#ddd;border-radius:10px;cursor:pointer;transition:background .2s;}
+  .tog input:checked+.tog-slider{background:#185fa5;}
+  .tog-slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s;}
+  .tog input:checked+.tog-slider:before{transform:translateX(16px);}
+  .hint{font-size:11px;color:#888;margin-top:4px;line-height:1.5;}
+  .sub{font-size:10px;font-weight:400;color:#aaa;text-transform:none;letter-spacing:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="code-box" id="codeout"></div>
+
+  <div class="canvas-wrap">
+    <canvas id="c" width="828" height="200"></canvas>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="section-title">Centre &amp; radius</div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">center x <span class="val" id="cxv">414</span></div>
+        <input type="range" id="cx" min="0" max="828" value="414" step="1">
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">center y <span class="val" id="cyv">100</span></div>
+        <input type="range" id="cy" min="0" max="200" value="100" step="1">
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">radius <span class="val" id="rv">80</span></div>
+        <input type="range" id="rad" min="5" max="180" value="80" step="1">
+      </div>
+
+      <div class="section-title">Stroke</div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">width &nbsp;<span style="font-size:11px;color:#888;">(0 = filled)</span><span class="val" id="lwv">0</span></div>
+        <input type="range" id="linewidth" min="0" max="20" value="0" step="1">
+      </div>
+
+      <div class="section-title">Colour (RGB)</div>
+      <div class="color-grid">
+        <div class="color-ctrl">
+          <label>R</label>
+          <input type="range" id="cr" min="0" max="255" value="29" step="1" style="accent-color:#e24b4a;">
+          <span class="val" id="crv">29</span>
+        </div>
+        <div class="color-ctrl">
+          <label>G</label>
+          <input type="range" id="cg" min="0" max="255" value="158" step="1" style="accent-color:#40a02b;">
+          <span class="val" id="cgv">158</span>
+        </div>
+        <div class="color-ctrl">
+          <label>B</label>
+          <input type="range" id="cb" min="0" max="255" value="117" step="1" style="accent-color:#185fa5;">
+          <span class="val" id="cbv">117</span>
+        </div>
+      </div>
+      <div id="swatch" class="swatch"></div>
+    </div>
+
+    <div>
+      <div class="section-title">Quadrants &nbsp;<span class="sub">toggle to draw only that quarter</span></div>
+      <div class="quad-grid">
+        <div class="toggle-wrap">
+          <label class="lbl">draw_top_left</label>
+          <label class="tog"><input type="checkbox" id="dtl" checked><span class="tog-slider"></span></label>
+        </div>
+        <div class="toggle-wrap">
+          <label class="lbl">draw_top_right</label>
+          <label class="tog"><input type="checkbox" id="dtr" checked><span class="tog-slider"></span></label>
+        </div>
+        <div class="toggle-wrap">
+          <label class="lbl">draw_bottom_left</label>
+          <label class="tog"><input type="checkbox" id="dbl" checked><span class="tog-slider"></span></label>
+        </div>
+        <div class="toggle-wrap">
+          <label class="lbl">draw_bottom_right</label>
+          <label class="tog"><input type="checkbox" id="dbr" checked><span class="tog-slider"></span></label>
+        </div>
+      </div>
+      <p class="hint">When all four are on, pygame omits the quadrant arguments entirely. Turn any off to draw a partial circle.</p>
+    </div>
+  </div>
+
+</div>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+function v(id){return parseInt(document.getElementById(id).value);}
+function s(id,val){document.getElementById(id).textContent=val;}
+function chk(id){return document.getElementById(id).checked;}
+
+function draw(){
+  const cx=v('cx'),cy=v('cy'),rad=v('rad'),lw=v('linewidth');
+  const r=v('cr'),g=v('cg'),b=v('cb');
+  const dtl=chk('dtl'),dtr=chk('dtr'),dbl=chk('dbl'),dbr=chk('dbr');
+  const allOn=dtl&&dtr&&dbl&&dbr;
+
+  s('cxv',cx);s('cyv',cy);s('rv',rad);s('lwv',lw);
+  s('crv',r);s('cgv',g);s('cbv',b);
+  document.getElementById('swatch').style.background=`rgb(${r},${g},${b})`;
+
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#16213e';
+  ctx.fillRect(0,0,W,H);
+
+  const color=`rgb(${r},${g},${b})`;
+
+  if(allOn){
+    ctx.beginPath();
+    ctx.arc(cx,cy,rad,0,Math.PI*2);
+  } else {
+    ctx.beginPath();
+    if(dtr) ctx.arc(cx,cy,rad,-Math.PI/2,0);
+    if(dbr) ctx.arc(cx,cy,rad,0,Math.PI/2);
+    if(dbl) ctx.arc(cx,cy,rad,Math.PI/2,Math.PI);
+    if(dtl) ctx.arc(cx,cy,rad,Math.PI,Math.PI*3/2);
+  }
+
+  if(lw===0){ctx.fillStyle=color;ctx.fill();}
+  else{ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.stroke();}
+
+  const base=`screen, (${r}, ${g}, ${b}), (${cx}, ${cy}), ${rad}`;
+  const extras=[];
+  if(lw>0) extras.push(`width=${lw}`);
+  if(!allOn){
+    extras.push(`draw_top_left=${dtl?'True':'False'}`);
+    extras.push(`draw_top_right=${dtr?'True':'False'}`);
+    extras.push(`draw_bottom_left=${dbl?'True':'False'}`);
+    extras.push(`draw_bottom_right=${dbr?'True':'False'}`);
+  }
+
+  let call;
+  if(extras.length===0) call=`pygame.draw.circle(${base})`;
+  else if(extras.length<=2) call=`pygame.draw.circle(${base}, ${extras.join(', ')})`;
+  else call=`pygame.draw.circle(\n    ${base},\n    ${extras.join(',\n    ')}\n)`;
+
+  document.getElementById('codeout').innerHTML=
+`<span class="cm"># parameters update as you move the sliders</span>\n<span class="fn">${call}</span>`;
+}
+
+document.querySelectorAll('input[type=range], input[type=checkbox]').forEach(el=>el.addEventListener('input',draw));
+draw();
+</script>
+</body>
+</html>
