@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pygame.draw.line — interactive explorer</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:system-ui,sans-serif;color:#1a1a2e;background:#f4f6f8;padding:16px;}
+  .wrap{max-width:860px;margin:0 auto;}
+  .code-box{background:#1e1e2e;border-radius:8px;padding:14px 18px;font-family:'Courier New',monospace;font-size:12.5px;line-height:1.7;color:#cdd6f4;white-space:pre-wrap;word-break:break-all;margin-bottom:14px;}
+  .fn{color:#89b4fa;}.cm{color:#6c7086;font-style:italic;}
+  .canvas-wrap{background:#16213e;border-radius:8px;padding:6px;margin-bottom:14px;}
+  canvas{display:block;border-radius:6px;width:100%;height:200px;}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px 32px;}
+  .section-title{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#888;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid #dde1e7;}
+  .section-title:first-child{margin-top:0;}
+  .ctrl-group{margin-bottom:10px;}
+  .ctrl-label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#555;margin-bottom:4px;}
+  .ctrl-label .val{font-weight:600;color:#1a1a2e;background:#f0f2f5;padding:1px 8px;border-radius:4px;font-size:11.5px;font-family:monospace;}
+  input[type=range]{width:100%;height:4px;accent-color:#185fa5;cursor:pointer;display:block;}
+  .color-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .color-ctrl{display:flex;flex-direction:column;gap:4px;align-items:center;}
+  .color-ctrl label{font-size:11px;color:#777;}
+  .color-ctrl .val{font-size:11px;font-family:monospace;color:#444;}
+  .swatch{width:100%;height:18px;border-radius:4px;border:1px solid #ddd;margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="code-box" id="codeout"></div>
+
+  <div class="canvas-wrap">
+    <canvas id="c" width="828" height="200"></canvas>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="section-title">Start position</div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">start x <span class="val" id="sx-v">120</span></div>
+        <input type="range" id="sx" min="0" max="828" value="120" step="1">
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">start y <span class="val" id="sy-v">160</span></div>
+        <input type="range" id="sy" min="0" max="200" value="160" step="1">
+      </div>
+
+      <div class="section-title">End position</div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">end x <span class="val" id="ex-v">700</span></div>
+        <input type="range" id="ex" min="0" max="828" value="700" step="1">
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">end y <span class="val" id="ey-v">40</span></div>
+        <input type="range" id="ey" min="0" max="200" value="40" step="1">
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Stroke</div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">width <span class="val" id="lwv">3</span></div>
+        <input type="range" id="linewidth" min="1" max="40" value="3" step="1">
+      </div>
+
+      <div class="section-title">Colour (RGB)</div>
+      <div class="color-grid">
+        <div class="color-ctrl">
+          <label>R</label>
+          <input type="range" id="cr" min="0" max="255" value="29" step="1" style="accent-color:#e24b4a;">
+          <span class="val" id="crv">29</span>
+        </div>
+        <div class="color-ctrl">
+          <label>G</label>
+          <input type="range" id="cg" min="0" max="255" value="158" step="1" style="accent-color:#40a02b;">
+          <span class="val" id="cgv">158</span>
+        </div>
+        <div class="color-ctrl">
+          <label>B</label>
+          <input type="range" id="cb" min="0" max="255" value="117" step="1" style="accent-color:#185fa5;">
+          <span class="val" id="cbv">117</span>
+        </div>
+      </div>
+      <div id="swatch" class="swatch"></div>
+    </div>
+  </div>
+
+</div>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+function v(id){return parseInt(document.getElementById(id).value);}
+function s(id,val){document.getElementById(id).textContent=val;}
+
+function draw(){
+  const sx=v('sx'),sy=v('sy'),ex=v('ex'),ey=v('ey');
+  const lw=v('linewidth');
+  const r=v('cr'),g=v('cg'),b=v('cb');
+
+  s('sx-v',sx);s('sy-v',sy);s('ex-v',ex);s('ey-v',ey);
+  s('lwv',lw);s('crv',r);s('cgv',g);s('cbv',b);
+  document.getElementById('swatch').style.background=`rgb(${r},${g},${b})`;
+
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#16213e';
+  ctx.fillRect(0,0,W,H);
+
+  const color=`rgb(${r},${g},${b})`;
+  ctx.strokeStyle=color;
+  ctx.lineWidth=lw;
+  ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(sx,sy);
+  ctx.lineTo(ex,ey);
+  ctx.stroke();
+
+  ctx.fillStyle='#ffffff44';
+  ctx.beginPath();ctx.arc(sx,sy,6,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(ex,ey,6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.arc(sx,sy,3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(ex,ey,3,0,Math.PI*2);ctx.fill();
+
+  const call=`pygame.draw.line(screen, (${r}, ${g}, ${b}), (${sx}, ${sy}), (${ex}, ${ey}), ${lw})`;
+
+  document.getElementById('codeout').innerHTML=
+`<span class="cm"># parameters update as you move the sliders</span>\n<span class="fn">${call}</span>`;
+}
+
+document.querySelectorAll('input[type=range]').forEach(el=>el.addEventListener('input',draw));
+draw();
+</script>
+</body>
+</html>
