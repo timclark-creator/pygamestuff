@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pygame.draw.rect — interactive explorer</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:system-ui,sans-serif;color:#1a1a2e;background:#f4f6f8;padding:16px;}
+  .wrap{max-width:860px;margin:0 auto;}
+  .code-box{background:#1e1e2e;border-radius:8px;padding:14px 18px;font-family:'Courier New',monospace;font-size:12.5px;line-height:1.7;color:#cdd6f4;white-space:pre-wrap;word-break:break-all;margin-bottom:14px;}
+  .kw{color:#cba6f7;}.fn{color:#89b4fa;}.num{color:#fab387;}.cm{color:#6c7086;font-style:italic;}
+  .canvas-wrap{background:#16213e;border-radius:8px;padding:6px;margin-bottom:14px;}
+  canvas{display:block;border-radius:6px;width:100%;height:200px;}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px 32px;}
+  .section-title{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#888;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid #dde1e7;}
+  .section-title:first-child{margin-top:0;}
+  .ctrl-group{margin-bottom:10px;}
+  .ctrl-label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#555;margin-bottom:4px;}
+  .ctrl-label .val{font-weight:600;color:#1a1a2e;background:#f0f2f5;padding:1px 8px;border-radius:4px;font-size:11.5px;font-family:monospace;}
+  input[type=range]{width:100%;height:4px;accent-color:#185fa5;cursor:pointer;display:block;}
+  .color-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .color-ctrl{display:flex;flex-direction:column;gap:4px;align-items:center;}
+  .color-ctrl label{font-size:11px;color:#777;}
+  .color-ctrl .val{font-size:11px;font-family:monospace;color:#444;}
+  .swatch{width:100%;height:18px;border-radius:4px;border:1px solid #ddd;margin-top:6px;}
+  .corner-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .sub{font-size:10px;font-weight:400;color:#aaa;text-transform:none;letter-spacing:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="code-box" id="codeout"></div>
+
+  <div class="canvas-wrap">
+    <canvas id="c" width="828" height="200"></canvas>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="section-title">Position &amp; size</div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">x <span class="val" id="xv">80</span></div>
+        <input type="range" id="rx" min="0" max="400" value="80" step="1">
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">y <span class="val" id="yv">40</span></div>
+        <input type="range" id="ry" min="0" max="160" value="40" step="1">
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">width <span class="val" id="wv">280</span></div>
+        <input type="range" id="rw" min="10" max="800" value="280" step="1">
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">height <span class="val" id="hv">120</span></div>
+        <input type="range" id="rh" min="10" max="190" value="120" step="1">
+      </div>
+
+      <div class="section-title">Stroke</div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">width &nbsp;<span style="font-size:11px;color:#888;">(0 = filled)</span><span class="val" id="lwv">0</span></div>
+        <input type="range" id="linewidth" min="0" max="20" value="0" step="1">
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Border radius — all corners</div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">border_radius <span class="val" id="brv">0</span></div>
+        <input type="range" id="br" min="0" max="90" value="0" step="1">
+      </div>
+
+      <div class="section-title">Individual corners &nbsp;<span class="sub">(-1 uses global)</span></div>
+      <div class="corner-grid">
+        <div class="ctrl-group">
+          <div class="ctrl-label" style="font-size:11.5px;">top-left <span class="val" id="tl-v">-1</span></div>
+          <input type="range" id="tl" min="-1" max="90" value="-1" step="1">
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-label" style="font-size:11.5px;">top-right <span class="val" id="tr-v">-1</span></div>
+          <input type="range" id="tr" min="-1" max="90" value="-1" step="1">
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-label" style="font-size:11.5px;">bottom-left <span class="val" id="bl-v">-1</span></div>
+          <input type="range" id="bl" min="-1" max="90" value="-1" step="1">
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-label" style="font-size:11.5px;">bottom-right <span class="val" id="br2-v">-1</span></div>
+          <input type="range" id="br2" min="-1" max="90" value="-1" step="1">
+        </div>
+      </div>
+
+      <div class="section-title">Colour (RGB)</div>
+      <div class="color-grid">
+        <div class="color-ctrl">
+          <label>R</label>
+          <input type="range" id="cr" min="0" max="255" value="29" step="1" style="accent-color:#e24b4a;">
+          <span class="val" id="crv">29</span>
+        </div>
+        <div class="color-ctrl">
+          <label>G</label>
+          <input type="range" id="cg" min="0" max="255" value="158" step="1" style="accent-color:#40a02b;">
+          <span class="val" id="cgv">158</span>
+        </div>
+        <div class="color-ctrl">
+          <label>B</label>
+          <input type="range" id="cb" min="0" max="255" value="117" step="1" style="accent-color:#185fa5;">
+          <span class="val" id="cbv">117</span>
+        </div>
+      </div>
+      <div id="swatch" class="swatch"></div>
+    </div>
+  </div>
+
+</div>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+function v(id){return parseInt(document.getElementById(id).value);}
+function s(id,val){document.getElementById(id).textContent=val;}
+
+function roundedRect(ctx,x,y,w,h,gR,tl,tr,bl,br){
+  const r=(n,fb)=>n>=0?n:fb;
+  const cap=(n,max)=>Math.min(n,max);
+  const ml=Math.min(w/2,h/2);
+  const Rtl=cap(r(tl,gR),ml),Rtr=cap(r(tr,gR),ml);
+  const Rbl=cap(r(bl,gR),ml),Rbr=cap(r(br,gR),ml);
+  ctx.beginPath();
+  ctx.moveTo(x+Rtl,y);
+  ctx.lineTo(x+w-Rtr,y);
+  ctx.arcTo(x+w,y,x+w,y+Rtr,Rtr);
+  ctx.lineTo(x+w,y+h-Rbr);
+  ctx.arcTo(x+w,y+h,x+w-Rbr,y+h,Rbr);
+  ctx.lineTo(x+Rbl,y+h);
+  ctx.arcTo(x,y+h,x,y+h-Rbl,Rbl);
+  ctx.lineTo(x,y+Rtl);
+  ctx.arcTo(x,y,x+Rtl,y,Rtl);
+  ctx.closePath();
+}
+
+function draw(){
+  const x=v('rx'),y=v('ry'),w=v('rw'),h=v('rh');
+  const lw=v('linewidth'),gR=v('br');
+  const tl=v('tl'),tr=v('tr'),bl=v('bl'),br=v('br2');
+  const r=v('cr'),g=v('cg'),b=v('cb');
+
+  s('xv',x);s('yv',y);s('wv',w);s('hv',h);
+  s('lwv',lw);s('brv',gR);
+  s('tl-v',tl);s('tr-v',tr);s('bl-v',bl);s('br2-v',br);
+  s('crv',r);s('cgv',g);s('cbv',b);
+  document.getElementById('swatch').style.background=`rgb(${r},${g},${b})`;
+
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#16213e';
+  ctx.fillRect(0,0,W,H);
+  roundedRect(ctx,x,y,w,h,gR,tl,tr,bl,br);
+  if(lw===0){ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fill();}
+  else{ctx.strokeStyle=`rgb(${r},${g},${b})`;ctx.lineWidth=lw;ctx.stroke();}
+
+  const extras=[];
+  if(lw>0) extras.push(`width=${lw}`);
+  if(gR>0) extras.push(`border_radius=${gR}`);
+  if(tl>=0) extras.push(`border_top_left_radius=${tl}`);
+  if(tr>=0) extras.push(`border_top_right_radius=${tr}`);
+  if(bl>=0) extras.push(`border_bottom_left_radius=${bl}`);
+  if(br>=0) extras.push(`border_bottom_right_radius=${br}`);
+
+  const base=`screen, (${r}, ${g}, ${b}), (${x}, ${y}, ${w}, ${h})`;
+  let call;
+  if(extras.length===0) call=`pygame.draw.rect(${base})`;
+  else if(extras.length<=2) call=`pygame.draw.rect(${base}, ${extras.join(', ')})`;
+  else call=`pygame.draw.rect(\n    ${base},\n    ${extras.join(',\n    ')}\n)`;
+
+  document.getElementById('codeout').innerHTML=
+`<span class="cm"># colour and position update as you move the sliders</span>\n<span class="fn">${call}</span>`;
+}
+
+document.querySelectorAll('input[type=range]').forEach(el=>el.addEventListener('input',draw));
+draw();
+</script>
+</body>
+</html>
