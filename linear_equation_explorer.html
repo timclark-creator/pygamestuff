@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear equations — interactive explorer</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:system-ui,sans-serif;color:#1a1a2e;background:#f4f6f8;padding:16px;}
+  .wrap{max-width:860px;margin:0 auto;}
+  .top{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;}
+  .equation{font-size:28px;font-weight:500;text-align:center;padding:18px;background:#fff;border-radius:12px;border:0.5px solid #dde1e7;font-family:'Courier New',monospace;}
+  .controls{display:flex;flex-direction:column;gap:12px;padding:16px;background:#fff;border-radius:12px;border:0.5px solid #dde1e7;}
+  .ctrl-label{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#555;}
+  .ctrl-label .val{font-weight:500;color:#1a1a2e;background:#f4f6f8;border:0.5px solid #dde1e7;padding:2px 10px;border-radius:8px;font-family:'Courier New',monospace;font-size:13px;min-width:52px;text-align:center;}
+  input[type=range]{width:100%;margin-top:4px;accent-color:#185fa5;height:4px;cursor:pointer;display:block;}
+  .bottom{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .graph-wrap{background:#fff;border-radius:12px;border:0.5px solid #dde1e7;padding:12px;}
+  canvas{display:block;width:100%;height:260px;}
+  .table-wrap{background:#fff;border-radius:12px;border:0.5px solid #dde1e7;padding:16px;display:flex;flex-direction:column;justify-content:center;}
+  .table-title{font-size:12px;color:#888;margin-bottom:14px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;}
+  .grid-table{display:grid;grid-template-columns:44px repeat(7,1fr);gap:4px;}
+  .cell{background:#f4f6f8;border:0.5px solid #dde1e7;border-radius:6px;height:44px;display:flex;align-items:center;justify-content:center;font-family:'Courier New',monospace;font-size:14px;font-weight:500;color:#1a1a2e;}
+  .cell.label{background:#eef0f4;color:#888;font-style:italic;font-size:15px;}
+  .cell.x-val{color:#888;font-size:13px;}
+  .cell.y-val.pos{color:#185fa5;}
+  .cell.y-val.neg{color:#a32d2d;}
+  .cell.y-val.zero{color:#888;}
+  @media(max-width:580px){
+    .top,.bottom{grid-template-columns:1fr;}
+    .equation{font-size:22px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="equation" id="eq">y = x</div>
+    <div class="controls">
+      <div>
+        <div class="ctrl-label">gradient (m) <span class="val" id="mv">1</span></div>
+        <input type="range" id="mslider" min="-20" max="20" value="4" step="1">
+      </div>
+      <div>
+        <div class="ctrl-label">y-intercept (b) <span class="val" id="bv">0</span></div>
+        <input type="range" id="bslider" min="-20" max="20" value="0" step="1">
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="graph-wrap">
+      <canvas id="graph" width="400" height="260" role="img" aria-label="Graph of linear equation"></canvas>
+    </div>
+    <div class="table-wrap">
+      <div class="table-title">Table of values</div>
+      <div class="grid-table" id="tbl"></div>
+    </div>
+  </div>
+
+</div>
+<script>
+const XS=[-3,-2,-1,0,1,2,3];
+
+function toFrac(n){
+  if(n===0) return '0';
+  const sign=n<0?'−':'';
+  const abs=Math.abs(n);
+  const whole=Math.floor(abs);
+  const frac=abs-whole;
+  if(frac<0.01) return sign+whole;
+  if(Math.abs(frac-0.25)<0.01) return sign+(whole?whole+'¼':'¼');
+  if(Math.abs(frac-0.5)<0.01) return sign+(whole?whole+'½':'½');
+  if(Math.abs(frac-0.75)<0.01) return sign+(whole?whole+'¾':'¾');
+  return sign+abs.toFixed(2);
+}
+
+function getM(){return parseInt(document.getElementById('mslider').value)*0.25;}
+function getB(){return parseInt(document.getElementById('bslider').value)*0.25;}
+
+function buildEq(m,b){
+  const mf=toFrac(m),bf=toFrac(b);
+  let s='y = ';
+  if(m===0) s+='0';
+  else if(m===1) s+='x';
+  else if(m===-1) s+='−x';
+  else s+=mf+'x';
+  if(b>0) s+=' + '+bf;
+  else if(b<0) s+=' − '+toFrac(Math.abs(b));
+  return s;
+}
+
+const canvas=document.getElementById('graph');
+const ctx=canvas.getContext('2d');
+
+function drawGraph(m,b){
+  const W=canvas.width,H=canvas.height;
+  const gridCol='rgba(0,0,0,0.07)';
+  const axisCol='rgba(0,0,0,0.25)';
+  const textCol='rgba(0,0,0,0.35)';
+  const lineCol='#185fa5';
+  const dotCol='#e24b4a';
+
+  ctx.clearRect(0,0,W,H);
+  const pad=32;
+  const cw=W-pad*2,ch=H-pad*2;
+  const cx=pad+cw/2,cy=pad+ch/2;
+  const scale=cw/10;
+
+  ctx.lineWidth=0.5;
+  for(let i=-5;i<=5;i++){
+    ctx.strokeStyle=gridCol;
+    const gx=cx+i*scale;
+    ctx.beginPath();ctx.moveTo(gx,pad);ctx.lineTo(gx,H-pad);ctx.stroke();
+    const gy=cy+i*scale;
+    ctx.beginPath();ctx.moveTo(pad,gy);ctx.lineTo(W-pad,gy);ctx.stroke();
+  }
+
+  ctx.strokeStyle=axisCol;ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad,cy);ctx.lineTo(W-pad,cy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,pad);ctx.lineTo(cx,H-pad);ctx.stroke();
+
+  ctx.fillStyle=textCol;
+  ctx.font='10px monospace';
+  ctx.textAlign='center';
+  for(let i=-5;i<=5;i++){
+    if(i===0) continue;
+    ctx.fillText(i,cx+i*scale,cy+14);
+    ctx.textAlign='right';
+    ctx.fillText(-i,cx-6,cy+i*scale+4);
+    ctx.textAlign='center';
+  }
+  ctx.fillText('0',cx-8,cy+14);
+
+  const x1=-5.5,x2=5.5;
+  ctx.strokeStyle=lineCol;ctx.lineWidth=2.5;ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(cx+x1*scale,cy-(m*x1+b)*scale);
+  ctx.lineTo(cx+x2*scale,cy-(m*x2+b)*scale);
+  ctx.stroke();
+
+  XS.forEach(x=>{
+    const y=m*x+b;
+    const px=cx+x*scale,py=cy-y*scale;
+    ctx.fillStyle='#fff';
+    ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=dotCol;ctx.strokeStyle=dotCol;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();
+  });
+}
+
+function buildTable(m,b){
+  const tbl=document.getElementById('tbl');
+  tbl.innerHTML='';
+
+  const xLabel=document.createElement('div');
+  xLabel.className='cell label';xLabel.textContent='x';
+  tbl.appendChild(xLabel);
+  XS.forEach(x=>{
+    const d=document.createElement('div');
+    d.className='cell x-val';d.textContent=toFrac(x);
+    tbl.appendChild(d);
+  });
+
+  const yLabel=document.createElement('div');
+  yLabel.className='cell label';yLabel.textContent='y';
+  tbl.appendChild(yLabel);
+  XS.forEach(x=>{
+    const y=m*x+b;
+    const cls=y===0?'zero':y>0?'pos':'neg';
+    const d=document.createElement('div');
+    d.className=`cell y-val ${cls}`;d.textContent=toFrac(y);
+    tbl.appendChild(d);
+  });
+}
+
+function update(){
+  const m=getM(),b=getB();
+  document.getElementById('mv').textContent=toFrac(m);
+  document.getElementById('bv').textContent=toFrac(b);
+  document.getElementById('eq').textContent=buildEq(m,b);
+  drawGraph(m,b);
+  buildTable(m,b);
+}
+
+document.getElementById('mslider').addEventListener('input',update);
+document.getElementById('bslider').addEventListener('input',update);
+update();
+</script>
+</body>
+</html>
