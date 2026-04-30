@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LA02 — Player Movement</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f1117;
+    --surface:#1a1d27;
+    --surface2:#22263a;
+    --border:#2e3348;
+    --text:#e8eaf0;
+    --muted:#7a80a0;
+    --sat:#4ade80;   --sat-bg:#0d2e1a;
+    --com:#60a5fa;   --com-bg:#0d1e3a;
+    --com2:#f59e0b;  --com2-bg:#2a1d05;
+    --exc:#e879f9;   --exc-bg:#2a0d2e;
+    --code-bg:#0a0c12;
+    --kw:#c084fc; --fn:#60a5fa; --st:#86efac; --cm:#6b7280; --num:#fb923c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 16px 48px;}
+  .wrap{max-width:900px;margin:0 auto;}
+  .hdr{margin-bottom:28px;}
+  .hdr-sub{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:6px;}
+  .hdr-title{font-size:26px;font-weight:600;}
+  .hdr-desc{font-size:14px;color:var(--muted);margin-top:8px;line-height:1.6;}
+
+  /* Tabs */
+  .level-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:28px;}
+  .tab{border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:14px 10px;cursor:pointer;text-align:center;transition:all .2s;}
+  .tab:hover{border-color:var(--muted);background:var(--surface2);}
+  .tab.active-sat{border-color:var(--sat);background:var(--sat-bg);}
+  .tab.active-com{border-color:var(--com);background:var(--com-bg);}
+  .tab.active-com2{border-color:var(--com2);background:var(--com2-bg);}
+  .tab.active-exc{border-color:var(--exc);background:var(--exc-bg);}
+  .tab-grade{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;}
+  .tab-grade.sat{color:var(--sat);}
+  .tab-grade.com{color:var(--com);}
+  .tab-grade.com2{color:var(--com2);}
+  .tab-grade.exc{color:var(--exc);}
+  .tab-name{font-size:12px;color:var(--muted);line-height:1.4;}
+
+  /* Panels */
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  /* Info cards */
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+  .info-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  .info-card h3{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px;}
+  .info-card p,.info-card li{font-size:13.5px;color:var(--text);line-height:1.65;}
+  .info-card ul{list-style:none;padding:0;}
+  .info-card li{padding-left:16px;position:relative;}
+  .info-card li::before{content:'→';position:absolute;left:0;color:var(--muted);font-size:11px;top:3px;}
+  code{font-family:'JetBrains Mono',monospace;font-size:12px;color:#c084fc;}
+
+  /* Step */
+  .step{margin-bottom:20px;}
+  .step-hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+  .step-num.sat{background:var(--sat-bg);color:var(--sat);border:1px solid var(--sat);}
+  .step-num.com{background:var(--com-bg);color:var(--com);border:1px solid var(--com);}
+  .step-num.com2{background:var(--com2-bg);color:var(--com2);border:1px solid var(--com2);}
+  .step-num.exc{background:var(--exc-bg);color:var(--exc);border:1px solid var(--exc);}
+  .step-title{font-size:15px;font-weight:600;}
+  .step-body{font-size:13.5px;color:var(--muted);line-height:1.65;margin-bottom:12px;}
+
+  /* Code block */
+  .code-wrap{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px;}
+  .code-toolbar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border);background:#0d0f16;}
+  .code-lang{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+  .copy-btn{font-size:11px;font-weight:600;color:var(--muted);background:none;border:1px solid var(--border);border-radius:5px;padding:3px 10px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+  .copy-btn:hover{color:var(--text);border-color:var(--muted);}
+  .copy-btn.copied{color:var(--sat);border-color:var(--sat);}
+  pre{padding:16px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.75;color:var(--text);}
+  .kw{color:var(--kw);} .fn{color:var(--fn);} .st{color:var(--st);} .cm{color:var(--cm);font-style:italic;} .num{color:var(--num);}
+
+  /* Game area */
+  .game-outer{background:#000;border:1px solid var(--border);border-radius:10px 10px 0 0;overflow:hidden;position:relative;}
+  .game-outer canvas{display:block;width:100%;aspect-ratio:640/480;}
+  .game-controls-bar{background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .game-keys{font-size:12px;color:var(--muted);}
+  .key-badge{display:inline-block;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 7px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);margin:0 1px;}
+  .restart-btn{font-size:11px;font-weight:600;color:var(--muted);background:none;border:1px solid var(--border);border-radius:5px;padding:3px 12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+  .restart-btn:hover{color:var(--text);border-color:var(--muted);}
+
+  /* Hints */
+  .hints-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:20px;}
+  .hints-section h3{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:14px;}
+  .hint-item{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  .hint-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none;}
+  .hint-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;}
+  .hint-text{font-size:13px;color:var(--muted);line-height:1.65;}
+
+  /* Challenge card */
+  .challenge-card{border-radius:10px;padding:18px;margin-bottom:20px;}
+  .challenge-card.com2{background:var(--com2-bg);border:1px solid var(--com2);}
+  .challenge-card.exc{background:var(--exc-bg);border:1px solid var(--exc);}
+  .challenge-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:3px 10px;border-radius:20px;margin-bottom:10px;}
+  .challenge-badge.com2{background:var(--com2);color:#1a0d00;}
+  .challenge-badge.exc{background:var(--exc);color:#1a001a;}
+  .challenge-card p{font-size:13.5px;line-height:1.7;}
+
+  /* Sign-off */
+  .signoff{border:1px dashed var(--border);border-radius:10px;padding:16px;display:flex;gap:24px;align-items:center;}
+  .signoff-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+  .signoff-line{width:160px;height:32px;border-bottom:1px solid var(--border);}
+  .grade-pill{display:inline-block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:6px 16px;border-radius:20px;}
+  .grade-pill.sat{background:var(--sat-bg);color:var(--sat);border:1px solid var(--sat);}
+  .grade-pill.com{background:var(--com-bg);color:var(--com);border:1px solid var(--com);}
+  .grade-pill.com2{background:var(--com2-bg);color:var(--com2);border:1px solid var(--com2);}
+  .grade-pill.exc{background:var(--exc-bg);color:var(--exc);border:1px solid var(--exc);}
+
+  @media(max-width:600px){
+    .level-tabs{grid-template-columns:repeat(2,1fr);}
+    .info-grid{grid-template-columns:1fr;}
+    .signoff{flex-direction:column;gap:14px;}
+    .game-controls-bar{flex-direction:column;gap:8px;align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hdr">
+    <div class="hdr-sub">Digital Technologies — PyGame 1</div>
+    <div class="hdr-title">Learning Activity 2: Player Movement</div>
+    <div class="hdr-desc">Select a completion level to view the worked example, try the live game, then copy the base code to your project.</div>
+  </div>
+
+  <div class="level-tabs">
+    <div class="tab active-sat" onclick="showPanel('sat',this)">
+      <div class="tab-grade sat">✓ Satisfactory</div>
+      <div class="tab-name">Directed Example 1<br>x/y variables</div>
+    </div>
+    <div class="tab" onclick="showPanel('com',this)">
+      <div class="tab-grade com">✓ Competent</div>
+      <div class="tab-name">Directed Example 2<br>pygame.Rect</div>
+    </div>
+    <div class="tab" onclick="showPanel('com2',this)">
+      <div class="tab-grade com2">✓ Commendable</div>
+      <div class="tab-name">Challenge 1<br>ESC + speed</div>
+    </div>
+    <div class="tab" onclick="showPanel('exc',this)">
+      <div class="tab-grade exc">✓ Exceptional</div>
+      <div class="tab-name">Challenge 2<br>Two players</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SATISFACTORY ═══════════════ -->
+  <div class="panel active" id="panel-sat">
+    <div class="info-grid">
+      <div class="info-card">
+        <h3>Background knowledge</h3>
+        <p>To move an object on screen, we track its position using <strong>variables</strong> and change those values each frame based on which keys are held down.<br><br>
+        <code>pygame.key.get_pressed()</code> returns a list of booleans — one per key — so we can detect multiple keys held at once.</p>
+      </div>
+      <div class="info-card">
+        <h3>Success criteria</h3>
+        <ul>
+          <li>Use <code>pygame.key.get_pressed()</code> to detect held keys</li>
+          <li>Move a rectangle by changing x and y with a speed variable</li>
+          <li>Support both WASD and arrow keys</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-hdr"><div class="step-num sat">1</div><div class="step-title">Set Up</div></div>
+      <div class="step-body">Open your <strong>raging_rectangles.py</strong> file from Learning Activity 1.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-hdr"><div class="step-num sat">2</div><div class="step-title">Enter the Code</div></div>
+      <div class="step-body">Type the code below carefully — do not copy and paste. Use the Copy button only once you've finished typing to check your work.</div>
+      <div class="code-wrap">
+        <div class="code-toolbar">
+          <span class="code-lang">Python — raging_rectangles.py</span>
+          <button class="copy-btn" onclick="copyCode(this,'sat')">Copy</button>
+        </div>
+        <pre><span class="kw">import</span> pygame
+
+pygame.<span class="fn">init</span>()
+screen = pygame.display.<span class="fn">set_mode</span>((<span class="num">640</span>, <span class="num">480</span>))
+pygame.display.<span class="fn">set_caption</span>(<span class="st">"Raging Rectangles"</span>)
+clock = pygame.time.<span class="fn">Clock</span>()
+
+<span class="cm"># Player starting position and speed</span>
+player_x = <span class="num">300</span>
+player_y = <span class="num">220</span>
+player_w = <span class="num">40</span>
+player_h = <span class="num">40</span>
+player_speed = <span class="num">5</span>
+
+running = <span class="kw">True</span>
+<span class="kw">while</span> running:
+    <span class="kw">for</span> event <span class="kw">in</span> pygame.event.<span class="fn">get</span>():
+        <span class="kw">if</span> event.type == pygame.QUIT:
+            running = <span class="kw">False</span>
+
+    <span class="cm"># Check which keys are currently held down</span>
+    keys = pygame.key.<span class="fn">get_pressed</span>()
+
+    <span class="cm"># Move UP</span>
+    <span class="kw">if</span> keys[pygame.K_w] <span class="kw">or</span> keys[pygame.K_UP]:
+        player_y -= player_speed
+    <span class="cm"># Move DOWN</span>
+    <span class="kw">if</span> keys[pygame.K_s] <span class="kw">or</span> keys[pygame.K_DOWN]:
+        player_y += player_speed
+    <span class="cm"># Move LEFT</span>
+    <span class="kw">if</span> keys[pygame.K_a] <span class="kw">or</span> keys[pygame.K_LEFT]:
+        player_x -= player_speed
+    <span class="cm"># Move RIGHT</span>
+    <span class="kw">if</span> keys[pygame.K_d] <span class="kw">or</span> keys[pygame.K_RIGHT]:
+        player_x += player_speed
+
+    screen.<span class="fn">fill</span>((<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>))
+    pygame.draw.<span class="fn">rect</span>(screen, (<span class="num">0</span>, <span class="num">0</span>, <span class="num">255</span>), (player_x, player_y, player_w, player_h))
+    pygame.display.<span class="fn">flip</span>()
+    clock.<span class="fn">tick</span>(<span class="num">60</span>)</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-hdr"><div class="step-num sat">3</div><div class="step-title">Worked Example — Try it live</div></div>
+      <div class="step-body">Click the game area to focus it, then use <strong>WASD</strong> or <strong>arrow keys</strong> to move the blue rectangle. This is exactly what your code will do when you run it in Python.</div>
+    </div>
+
+    <div class="game-outer"><canvas id="game-sat" width="640" height="480" tabindex="0"></canvas></div>
+    <div class="game-controls-bar">
+      <div class="game-keys">
+        Move: <span class="key-badge">W</span><span class="key-badge">A</span><span class="key-badge">S</span><span class="key-badge">D</span>
+        or <span class="key-badge">↑</span><span class="key-badge">←</span><span class="key-badge">↓</span><span class="key-badge">→</span>
+      </div>
+      <button class="restart-btn" onclick="resetGame('sat')">Reset position</button>
+    </div>
+
+    <div class="hints-section">
+      <h3>Hints &amp; key ideas</h3>
+      <div class="hint-item">
+        <div class="hint-label">Why four separate <code>if</code> statements?</div>
+        <div class="hint-text">Using <code>if/elif</code> would only allow one direction per frame. Four separate <code>if</code> statements let all held keys fire simultaneously — so holding W and D together moves the player diagonally up-right.</div>
+      </div>
+      <div class="hint-item">
+        <div class="hint-label">Why does moving up <em>subtract</em> from y?</div>
+        <div class="hint-text">In pygame, y = 0 is at the <strong>top</strong> of the screen and increases downward. Subtracting from y moves the player toward the top of the screen (upward visually).</div>
+      </div>
+      <div class="hint-item">
+        <div class="hint-label">What does <code>clock.tick(60)</code> do?</div>
+        <div class="hint-text">It limits the loop to 60 frames per second. Without it the loop runs as fast as the CPU allows — movement speed would vary on different computers.</div>
+      </div>
+    </div>
+
+    <div class="signoff">
+      <div><div class="signoff-label">Teacher signature</div><div class="signoff-line"></div></div>
+      <div><div class="signoff-label">Grade awarded</div><div class="grade-pill sat">Satisfactory</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ COMPETENT ═══════════════ -->
+  <div class="panel" id="panel-com">
+    <div class="info-grid">
+      <div class="info-card">
+        <h3>What's new at this level</h3>
+        <p>Instead of separate <code>player_x</code> and <code>player_y</code> variables, we use a <strong>pygame.Rect</strong> to store position and size together. We update <code>player_rect.x</code> and <code>player_rect.y</code> directly and pass the Rect straight into <code>pygame.draw.rect()</code>.</p>
+      </div>
+      <div class="info-card">
+        <h3>Key concept</h3>
+        <p><code>pygame.Rect(x, y, width, height)</code> stores all four values in one object and gives you free attributes like <code>.centerx</code>, <code>.right</code>, and <code>.bottom</code> — very useful for boundary checking and collision detection later.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-hdr"><div class="step-num com">1</div><div class="step-title">Enter the Code</div></div>
+      <div class="step-body">Type the code below carefully — do not copy and paste.</div>
+      <div class="code-wrap">
+        <div class="code-toolbar">
+          <span class="code-lang">Python — raging_rectangles.py</span>
+          <button class="copy-btn" onclick="copyCode(this,'com')">Copy</button>
+        </div>
+        <pre><span class="kw">import</span> pygame
+
+pygame.<span class="fn">init</span>()
+screen = pygame.display.<span class="fn">set_mode</span>((<span class="num">640</span>, <span class="num">480</span>))
+pygame.display.<span class="fn">set_caption</span>(<span class="st">"Raging Rectangles"</span>)
+clock = pygame.time.<span class="fn">Clock</span>()
+
+<span class="cm"># Use a Rect to store the player's position and size together</span>
+player_rect = pygame.<span class="fn">Rect</span>(<span class="num">300</span>, <span class="num">220</span>, <span class="num">40</span>, <span class="num">40</span>)  <span class="cm"># (x, y, width, height)</span>
+player_speed = <span class="num">5</span>
+
+running = <span class="kw">True</span>
+<span class="kw">while</span> running:
+    <span class="kw">for</span> event <span class="kw">in</span> pygame.event.<span class="fn">get</span>():
+        <span class="kw">if</span> event.type == pygame.QUIT:
+            running = <span class="kw">False</span>
+
+    keys = pygame.key.<span class="fn">get_pressed</span>()
+
+    <span class="cm"># Move the rect by updating its x and y values</span>
+    <span class="kw">if</span> keys[pygame.K_w] <span class="kw">or</span> keys[pygame.K_UP]:
+        player_rect.y -= player_speed
+    <span class="kw">if</span> keys[pygame.K_s] <span class="kw">or</span> keys[pygame.K_DOWN]:
+        player_rect.y += player_speed
+    <span class="kw">if</span> keys[pygame.K_a] <span class="kw">or</span> keys[pygame.K_LEFT]:
+        player_rect.x -= player_speed
+    <span class="kw">if</span> keys[pygame.K_d] <span class="kw">or</span> keys[pygame.K_RIGHT]:
+        player_rect.x += player_speed
+
+    screen.<span class="fn">fill</span>((<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>))
+    <span class="cm"># Draw the player using the Rect object directly</span>
+    pygame.draw.<span class="fn">rect</span>(screen, (<span class="num">0</span>, <span class="num">0</span>, <span class="num">255</span>), player_rect)
+    pygame.display.<span class="fn">flip</span>()
+    clock.<span class="fn">tick</span>(<span class="num">60</span>)</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-hdr"><div class="step-num com">2</div><div class="step-title">Worked Example — Try it live</div></div>
+      <div class="step-body">The game looks identical to Satisfactory — but the Python behind it uses <code>player_rect.x</code> and <code>player_rect.y</code> instead of separate variables.</div>
+    </div>
+
+    <div class="game-outer"><canvas id="game-com" width="640" height="480" tabindex="0"></canvas></div>
+    <div class="game-controls-bar">
+      <div class="game-keys">
+        Move: <span class="key-badge">W</span><span class="key-badge">A</span><span class="key-badge">S</span><span class="key-badge">D</span>
+        or <span class="key-badge">↑</span><span class="key-badge">←</span><span class="key-badge">↓</span><span class="key-badge">→</span>
+      </div>
+      <button class="restart-btn" onclick="resetGame('com')">Reset position</button>
+    </div>
+
+    <div class="hints-section">
+      <h3>Hints &amp; key ideas</h3>
+      <div class="hint-item">
+        <div class="hint-label">What does <code>pygame.Rect(300, 220, 40, 40)</code> store?</div>
+        <div class="hint-text">x = 300, y = 220, width = 40, height = 40. All four values in one object instead of four separate variables.</div>
+      </div>
+      <div class="hint-item">
+        <div class="hint-label">Starting in the bottom-right corner</div>
+        <div class="hint-text">The window is 640×480. The player is 40×40. So <code>pygame.Rect(600, 440, 40, 40)</code> places it flush in the bottom-right corner (640−40=600, 480−40=440).</div>
+      </div>
+      <div class="hint-item">
+        <div class="hint-label">Free attributes you get from a Rect</div>
+        <div class="hint-text">A pygame.Rect automatically gives you <code>.centerx</code>, <code>.centery</code>, <code>.right</code>, <code>.bottom</code>, <code>.topleft</code> and more — all calculated from x, y, width, height. Very useful in future activities.</div>
+      </div>
+    </div>
+
+    <div class="signoff">
+      <div><div class="signoff-label">Teacher signature</div><div class="signoff-line"></div></div>
+      <div><div class="signoff-label">Grade awarded</div><div class="grade-pill com">Competent</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ COMMENDABLE ═══════════════ -->
+  <div class="panel" id="panel-com2">
+    <div class="challenge-card com2">
+      <span class="challenge-badge com2">Challenge 1 — Commendable</span>
+      <p>Add ESC key support to quit the game cleanly. Use a single <code>player_speed</code> variable. Show current speed in the window title. <strong>Every section must be commented.</strong></p>
+    </div>
+
+    <div class="step">
+      <div class="step-hdr"><div class="step-num com2">1</div><div class="step-title">Enter the Code</div></div>
+      <div class="step-body">Type the code below carefully — do not copy and paste. Notice how every section has a comment and speed is set in one place.</div>
+      <div class="code-wrap">
+        <div class="code-toolbar">
+          <span class="code-lang">Python — raging_rectangles.py</span>
+          <button class="copy-btn" onclick="copyCode(this,'com2')">Copy</button>
+        </div>
+        <pre><span class="kw">import</span> pygame
+
+<span class="cm"># Initialise pygame</span>
+pygame.<span class="fn">init</span>()
+
+<span class="cm"># Set up the display window</span>
+screen = pygame.display.<span class="fn">set_mode</span>((<span class="num">640</span>, <span class="num">480</span>))
+clock = pygame.time.<span class="fn">Clock</span>()
+
+<span class="cm"># Player setup — change speed here to affect the whole game</span>
+player_rect = pygame.<span class="fn">Rect</span>(<span class="num">300</span>, <span class="num">220</span>, <span class="num">40</span>, <span class="num">40</span>)
+player_speed = <span class="num">8</span>  <span class="cm"># Increased for snappy feel</span>
+
+<span class="cm"># Show speed in window title as a visual indicator</span>
+pygame.display.<span class="fn">set_caption</span>(<span class="fn">f</span><span class="st">"Raging Rectangles — Speed: {player_speed}"</span>)
+
+running = <span class="kw">True</span>
+<span class="kw">while</span> running:
+    <span class="cm"># Handle window close event</span>
+    <span class="kw">for</span> event <span class="kw">in</span> pygame.event.<span class="fn">get</span>():
+        <span class="kw">if</span> event.type == pygame.QUIT:
+            running = <span class="kw">False</span>
+
+    <span class="cm"># Check held keys each frame</span>
+    keys = pygame.key.<span class="fn">get_pressed</span>()
+
+    <span class="cm"># ESC key quits the game cleanly</span>
+    <span class="kw">if</span> keys[pygame.K_ESCAPE]:
+        running = <span class="kw">False</span>
+
+    <span class="cm"># Move the player rect</span>
+    <span class="kw">if</span> keys[pygame.K_w] <span class="kw">or</span> keys[pygame.K_UP]:
+        player_rect.y -= player_speed
+    <span class="kw">if</span> keys[pygame.K_s] <span class="kw">or</span> keys[pygame.K_DOWN]:
+        player_rect.y += player_speed
+    <span class="kw">if</span> keys[pygame.K_a] <span class="kw">or</span> keys[pygame.K_LEFT]:
+        player_rect.x -= player_speed
+    <span class="kw">if</span> keys[pygame.K_d] <span class="kw">or</span> keys[pygame.K_RIGHT]:
+        player_rect.x += player_speed
+
+    <span class="cm"># Clear screen and draw player</span>
+    screen.<span class="fn">fill</span>((<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>))
+    pygame.draw.<span class="fn">rect</span>(screen, (<span class="num">0</span>, <span class="num">0</span>, <span class="num">255</span>), player_rect)
+    pygame.display.<span class="fn">flip</span>()
+    clock.<span class="fn">tick</span>(<span class="num">60</span>)
+
+<span class="cm"># Clean exit</span>
+pygame.<span class="fn">quit</span>()</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-hdr"><div class="step-num com2">2</div><div class="step-title">Worked Example — Try it live</div></div>
+      <div class="step-body">Notice the player moves faster (speed = 8). The status bar shows the speed value, simulating the window title indicator.</div>
+    </div>
+
+    <div class="game-outer"><canvas id="game-com2" width="640" height="480" tabindex="0"></canvas></div>
+    <div class="game-controls-bar">
+      <div class="game-keys">
+        Move: <span class="key-badge">W</span><span class="key-badge">A</span><span class="key-badge">S</span><span class="key-badge">D</span>
+        or <span class="key-badge">↑</span><span class="key-badge">←</span><span class="key-badge">↓</span><span class="key-badge">→</span>
+        &nbsp;|&nbsp; <span id="speed-display" style="color:var(--com2);font-weight:600;">Speed: 8</span>
+      </div>
+      <button class="restart-btn" onclick="resetGame('com2')">Reset position</button>
+    </div>
+
+    <div class="hints-section">
+      <h3>Hints &amp; key ideas</h3>
+      <div class="hint-item">
+        <div class="hint-label">How does the f-string show the speed in the title?</div>
+        <div class="hint-text">An f-string embeds a variable directly in a string: <code>f"Speed: {player_speed}"</code> becomes <code>"Speed: 8"</code> at runtime. Change the variable once and the caption updates automatically.</div>
+      </div>
+      <div class="hint-item">
+        <div class="hint-label">Single source of truth</div>
+        <div class="hint-text">If speed appeared as the literal number <code>8</code> in four different <code>if</code> blocks, you'd need to find and change it four times. One variable at the top means one change updates the whole program.</div>
+      </div>
+      <div class="hint-item">
+        <div class="hint-label">ESC via <code>get_pressed()</code> vs the event loop</div>
+        <div class="hint-text">Both work. <code>get_pressed()</code> detects a held key each frame — consistent with how movement is handled. <code>pygame.KEYDOWN</code> in the event loop detects a single press. For quitting, either is fine.</div>
+      </div>
+    </div>
+
+    <div class="signoff">
+      <div><div class="signoff-label">Teacher signature</div><div class="signoff-line"></div></div>
+      <div><div class="signoff-label">Grade awarded</div><div class="grade-pill com2">Commendable</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ EXCEPTIONAL ═══════════════ -->
+  <div class="panel" id="panel-exc">
+    <div class="challenge-card exc">
+      <span class="challenge-badge exc">Challenge 2 — Exceptional</span>
+      <p>Add a second player (different colour) controlled by <code>I J K L</code>. When both shapes overlap using <code>colliderect()</code>, show "Collision!" in the window title. <strong>Every line or section must be commented.</strong></p>
+    </div>
+
+    <div class="step">
+      <div class="step-hdr"><div class="step-num exc">1</div><div class="step-title">Enter the Code</div></div>
+      <div class="step-body">Type the code below carefully — do not copy and paste.</div>
+      <div class="code-wrap">
+        <div class="code-toolbar">
+          <span class="code-lang">Python — raging_rectangles.py</span>
+          <button class="copy-btn" onclick="copyCode(this,'exc')">Copy</button>
+        </div>
+        <pre><span class="kw">import</span> pygame
+
+<span class="cm"># Initialise pygame</span>
+pygame.<span class="fn">init</span>()
+
+<span class="cm"># Set up the display</span>
+screen = pygame.display.<span class="fn">set_mode</span>((<span class="num">640</span>, <span class="num">480</span>))
+clock = pygame.time.<span class="fn">Clock</span>()
+
+<span class="cm"># Player 1 — blue, controlled by WASD / arrow keys</span>
+p1_rect = pygame.<span class="fn">Rect</span>(<span class="num">200</span>, <span class="num">220</span>, <span class="num">40</span>, <span class="num">40</span>)
+p1_speed = <span class="num">5</span>
+p1_colour = (<span class="num">0</span>, <span class="num">0</span>, <span class="num">255</span>)
+
+<span class="cm"># Player 2 — red, controlled by IJKL</span>
+p2_rect = pygame.<span class="fn">Rect</span>(<span class="num">400</span>, <span class="num">220</span>, <span class="num">40</span>, <span class="num">40</span>)
+p2_speed = <span class="num">5</span>
+p2_colour = (<span class="num">255</span>, <span class="num">50</span>, <span class="num">50</span>)
+
+running = <span class="kw">True</span>
+<span class="kw">while</span> running:
+    <span class="cm"># Handle quit event</span>
+    <span class="kw">for</span> event <span class="kw">in</span> pygame.event.<span class="fn">get</span>():
+        <span class="kw">if</span> event.type == pygame.QUIT:
+            running = <span class="kw">False</span>
+
+    <span class="cm"># Get all currently held keys</span>
+    keys = pygame.key.<span class="fn">get_pressed</span>()
+
+    <span class="cm"># ESC to quit</span>
+    <span class="kw">if</span> keys[pygame.K_ESCAPE]:
+        running = <span class="kw">False</span>
+
+    <span class="cm"># Player 1 movement (WASD / arrow keys)</span>
+    <span class="kw">if</span> keys[pygame.K_w] <span class="kw">or</span> keys[pygame.K_UP]:
+        p1_rect.y -= p1_speed
+    <span class="kw">if</span> keys[pygame.K_s] <span class="kw">or</span> keys[pygame.K_DOWN]:
+        p1_rect.y += p1_speed
+    <span class="kw">if</span> keys[pygame.K_a] <span class="kw">or</span> keys[pygame.K_LEFT]:
+        p1_rect.x -= p1_speed
+    <span class="kw">if</span> keys[pygame.K_d] <span class="kw">or</span> keys[pygame.K_RIGHT]:
+        p1_rect.x += p1_speed
+
+    <span class="cm"># Player 2 movement (IJKL keys)</span>
+    <span class="kw">if</span> keys[pygame.K_i]:
+        p2_rect.y -= p2_speed
+    <span class="kw">if</span> keys[pygame.K_k]:
+        p2_rect.y += p2_speed
+    <span class="kw">if</span> keys[pygame.K_j]:
+        p2_rect.x -= p2_speed
+    <span class="kw">if</span> keys[pygame.K_l]:
+        p2_rect.x += p2_speed
+
+    <span class="cm"># Check if the two players overlap using colliderect()</span>
+    <span class="kw">if</span> p1_rect.<span class="fn">colliderect</span>(p2_rect):
+        pygame.display.<span class="fn">set_caption</span>(<span class="st">"Raging Rectangles — Collision!"</span>)
+    <span class="kw">else</span>:
+        pygame.display.<span class="fn">set_caption</span>(<span class="st">"Raging Rectangles"</span>)
+
+    <span class="cm"># Clear screen and draw both players</span>
+    screen.<span class="fn">fill</span>((<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>))
+    pygame.draw.<span class="fn">rect</span>(screen, p1_colour, p1_rect)
+    pygame.draw.<span class="fn">rect</span>(screen, p2_colour, p2_rect)
+    pygame.display.<span class="fn">flip</span>()
+    clock.<span class="fn">tick</span>(<span class="num">60</span>)
+
+<span class="cm"># Clean exit</span>
+pygame.<span class="fn">quit</span>()</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-hdr"><div class="step-num exc">2</div><div class="step-title">Worked Example — Try it live</div></div>
+      <div class="step-body">Player 1 uses <strong>WASD / arrows</strong>. Player 2 uses <strong>IJKL</strong>. Overlap them — watch the collision indicator in the bar below light up.</div>
+    </div>
+
+    <div class="game-outer"><canvas id="game-exc" width="640" height="480" tabindex="0"></canvas></div>
+    <div class="game-controls-bar">
+      <div class="game-keys">
+        P1: <span class="key-badge">W</span><span class="key-badge">A</span><span class="key-badge">S</span><span class="key-badge">D</span> /
+        <span class="key-badge">↑</span><span class="key-badge">←</span><span class="key-badge">↓</span><span class="key-badge">→</span>
+        &nbsp;&nbsp;P2: <span class="key-badge">I</span><span class="key-badge">J</span><span class="key-badge">K</span><span class="key-badge">L</span>
+        &nbsp;|&nbsp; <span id="collision-label" style="color:var(--muted);font-weight:600;transition:color .15s;">No collision</span>
+      </div>
+      <button class="restart-btn" onclick="resetGame('exc')">Reset positions</button>
+    </div>
+
+    <div class="hints-section">
+      <h3>Hints &amp; key ideas</h3>
+      <div class="hint-item">
+        <div class="hint-label">How does <code>colliderect()</code> detect overlap?</div>
+        <div class="hint-text">It compares the edges of both rectangles. If p1's right edge passes p2's left edge AND p1's bottom passes p2's top (and vice-versa), they overlap. It returns <code>True</code> if so, <code>False</code> if not.</div>
+      </div>
+      <div class="hint-item">
+        <div class="hint-label">Why call <code>set_caption()</code> every frame?</div>
+        <div class="hint-text">Collision state changes every frame — players might overlap one frame and separate the next. Calling it inside the loop keeps the title in sync with the current state at all times.</div>
+      </div>
+      <div class="hint-item">
+        <div class="hint-label">Extension idea</div>
+        <div class="hint-text">Instead of updating the title, try drawing text on screen with <code>pygame.font</code>, or change the background colour to red on collision. Both are more visible than a title change and would make a great further extension.</div>
+      </div>
+    </div>
+
+    <div class="signoff">
+      <div><div class="signoff-label">Teacher signature</div><div class="signoff-line"></div></div>
+      <div><div class="signoff-label">Grade awarded</div><div class="grade-pill exc">Exceptional</div></div>
+    </div>
+  </div>
+
+</div><!-- end wrap -->
+
+<script>
+/* ── Plain code strings for clipboard ── */
+const CODE = {
+  sat:`import pygame
+
+pygame.init()
+screen = pygame.display.set_mode((640, 480))
+pygame.display.set_caption("Raging Rectangles")
+clock = pygame.time.Clock()
+
+# Player starting position and speed
+player_x = 300
+player_y = 220
+player_w = 40
+player_h = 40
+player_speed = 5
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    keys = pygame.key.get_pressed()
+
+    if keys[pygame.K_w] or keys[pygame.K_UP]:
+        player_y -= player_speed
+    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+        player_y += player_speed
+    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+        player_x -= player_speed
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        player_x += player_speed
+
+    screen.fill((0, 0, 0))
+    pygame.draw.rect(screen, (0, 0, 255), (player_x, player_y, player_w, player_h))
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()`,
+
+  com:`import pygame
+
+pygame.init()
+screen = pygame.display.set_mode((640, 480))
+pygame.display.set_caption("Raging Rectangles")
+clock = pygame.time.Clock()
+
+# Use a Rect to store the player's position and size together
+player_rect = pygame.Rect(300, 220, 40, 40)  # (x, y, width, height)
+player_speed = 5
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    keys = pygame.key.get_pressed()
+
+    if keys[pygame.K_w] or keys[pygame.K_UP]:
+        player_rect.y -= player_speed
+    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+        player_rect.y += player_speed
+    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+        player_rect.x -= player_speed
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        player_rect.x += player_speed
+
+    screen.fill((0, 0, 0))
+    pygame.draw.rect(screen, (0, 0, 255), player_rect)
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()`,
+
+  com2:`import pygame
+
+# Initialise pygame
+pygame.init()
+
+# Set up the display window
+screen = pygame.display.set_mode((640, 480))
+clock = pygame.time.Clock()
+
+# Player setup — change speed here to affect the whole game
+player_rect = pygame.Rect(300, 220, 40, 40)
+player_speed = 8  # Increased for snappy feel
+
+# Show speed in window title as a visual indicator
+pygame.display.set_caption(f"Raging Rectangles — Speed: {player_speed}")
+
+running = True
+while running:
+    # Handle window close event
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # Check held keys each frame
+    keys = pygame.key.get_pressed()
+
+    # ESC key quits the game cleanly
+    if keys[pygame.K_ESCAPE]:
+        running = False
+
+    # Move the player rect
+    if keys[pygame.K_w] or keys[pygame.K_UP]:
+        player_rect.y -= player_speed
+    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+        player_rect.y += player_speed
+    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+        player_rect.x -= player_speed
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        player_rect.x += player_speed
+
+    # Clear screen and draw player
+    screen.fill((0, 0, 0))
+    pygame.draw.rect(screen, (0, 0, 255), player_rect)
+    pygame.display.flip()
+    clock.tick(60)
+
+# Clean exit
+pygame.quit()`,
+
+  exc:`import pygame
+
+# Initialise pygame
+pygame.init()
+
+# Set up the display
+screen = pygame.display.set_mode((640, 480))
+clock = pygame.time.Clock()
+
+# Player 1 — blue, controlled by WASD / arrow keys
+p1_rect = pygame.Rect(200, 220, 40, 40)
+p1_speed = 5
+p1_colour = (0, 0, 255)
+
+# Player 2 — red, controlled by IJKL
+p2_rect = pygame.Rect(400, 220, 40, 40)
+p2_speed = 5
+p2_colour = (255, 50, 50)
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    keys = pygame.key.get_pressed()
+
+    if keys[pygame.K_ESCAPE]:
+        running = False
+
+    # Player 1 movement
+    if keys[pygame.K_w] or keys[pygame.K_UP]:
+        p1_rect.y -= p1_speed
+    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+        p1_rect.y += p1_speed
+    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+        p1_rect.x -= p1_speed
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        p1_rect.x += p1_speed
+
+    # Player 2 movement
+    if keys[pygame.K_i]:
+        p2_rect.y -= p2_speed
+    if keys[pygame.K_k]:
+        p2_rect.y += p2_speed
+    if keys[pygame.K_j]:
+        p2_rect.x -= p2_speed
+    if keys[pygame.K_l]:
+        p2_rect.x += p2_speed
+
+    if p1_rect.colliderect(p2_rect):
+        pygame.display.set_caption("Raging Rectangles — Collision!")
+    else:
+        pygame.display.set_caption("Raging Rectangles")
+
+    screen.fill((0, 0, 0))
+    pygame.draw.rect(screen, p1_colour, p1_rect)
+    pygame.draw.rect(screen, p2_colour, p2_rect)
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()`
+};
+
+function copyCode(btn, id) {
+  navigator.clipboard.writeText(CODE[id]).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+/* ── Tab switching ── */
+function showPanel(id, tab) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.className = 'tab');
+  document.getElementById('panel-' + id).classList.add('active');
+  tab.classList.add('active-' + id);
+  setTimeout(() => initGame(id), 50);
+}
+
+/* ── Game engine ── */
+const games = {};
+
+function initGame(id) {
+  const canvas = document.getElementById('game-' + id);
+  if (!canvas) return;
+  if (games[id]) {
+    cancelAnimationFrame(games[id].raf);
+    window.removeEventListener('keydown', games[id].kd);
+    window.removeEventListener('keyup', games[id].ku);
+  }
+
+  const ctx = canvas.getContext('2d');
+  const W = 640, H = 480;
+  const heldKeys = {};
+
+  const state = {
+    focused: false,
+    p1: { x: id === 'exc' ? 200 : 300, y: 220, w: 40, h: 40,
+          speed: id === 'com2' ? 8 : 5, color: '#0044ff' },
+    p2: id === 'exc'
+        ? { x: 400, y: 220, w: 40, h: 40, speed: 5, color: '#ff3232' }
+        : null
+  };
+
+  const kd = e => {
+    heldKeys[e.code] = true;
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+  };
+  const ku = e => { heldKeys[e.code] = false; };
+  window.addEventListener('keydown', kd);
+  window.addEventListener('keyup', ku);
+  canvas.addEventListener('click', () => { state.focused = true; canvas.focus(); });
+
+  function rectsOverlap(a, b) {
+    return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+  }
+
+  function update() {
+    const p = state.p1;
+    if (heldKeys['KeyW'] || heldKeys['ArrowUp'])    p.y -= p.speed;
+    if (heldKeys['KeyS'] || heldKeys['ArrowDown'])  p.y += p.speed;
+    if (heldKeys['KeyA'] || heldKeys['ArrowLeft'])  p.x -= p.speed;
+    if (heldKeys['KeyD'] || heldKeys['ArrowRight']) p.x += p.speed;
+
+    if (state.p2) {
+      const p2 = state.p2;
+      if (heldKeys['KeyI']) p2.y -= p2.speed;
+      if (heldKeys['KeyK']) p2.y += p2.speed;
+      if (heldKeys['KeyJ']) p2.x -= p2.speed;
+      if (heldKeys['KeyL']) p2.x += p2.speed;
+      const col = rectsOverlap(p, p2);
+      const lbl = document.getElementById('collision-label');
+      if (lbl) {
+        lbl.textContent = col ? '💥 Collision!' : 'No collision';
+        lbl.style.color  = col ? '#e879f9' : 'var(--muted)';
+      }
+    }
+  }
+
+  function render() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+
+    if (!state.focused) {
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#fff';
+      ctx.font = '600 20px "DM Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Click here to play', W/2, H/2 - 12);
+      ctx.font = '15px "DM Sans", sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillText('Then use keyboard to move', W/2, H/2 + 16);
+      ctx.textAlign = 'left';
+      return;
+    }
+
+    ctx.fillStyle = state.p1.color;
+    ctx.fillRect(state.p1.x, state.p1.y, state.p1.w, state.p1.h);
+
+    if (state.p2) {
+      ctx.fillStyle = state.p2.color;
+      ctx.fillRect(state.p2.x, state.p2.y, state.p2.w, state.p2.h);
+    }
+
+    // Label players
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '11px "DM Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('P1', state.p1.x + state.p1.w/2, state.p1.y - 6);
+    if (state.p2) ctx.fillText('P2', state.p2.x + state.p2.w/2, state.p2.y - 6);
+    ctx.textAlign = 'left';
+  }
+
+  function loop() {
+    if (state.focused) update();
+    render();
+    games[id].raf = requestAnimationFrame(loop);
+  }
+
+  games[id] = { kd, ku, raf: null, state };
+  loop();
+}
+
+function resetGame(id) {
+  if (!games[id]) return;
+  const s = games[id].state;
+  s.p1.x = id === 'exc' ? 200 : 300;
+  s.p1.y = 220;
+  if (s.p2) { s.p2.x = 400; s.p2.y = 220; }
+}
+
+initGame('sat');
+</script>
+</body>
+</html>
